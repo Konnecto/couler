@@ -73,14 +73,22 @@ def set_dependencies(step_function, dependencies=None):
 
     states.workflow.enable_dag_mode()
 
-    states._outputs_tmp = []
+    states._outputs_tmp = {
+        "parameters": [],
+        "artifacts": []
+    }
+
     if dependencies is not None and isinstance(dependencies, list):
         for step in dependencies:
             output = states.get_step_output(step)
 
-            for o in output:
-                if isinstance(o, (OutputArtifact, OutputParameter, OutputJob)):
-                    states._outputs_tmp.append(o)
+            for o in output["parameters"]:
+                if isinstance(o, (OutputParameter)):
+                    states._outputs_tmp["parameters"].append(o)
+
+            for o in output["artifacts"]:
+                if isinstance(o, (OutputArtifact, OutputJob)):
+                    states._outputs_tmp["artifacts"].append(o)
 
     ret = step_function()
     states._outputs_tmp = None

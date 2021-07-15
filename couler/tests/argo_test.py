@@ -196,7 +196,7 @@ class ArgoTest(ArgoBaseTestCase):
             couler.run_script(
                 image="docker/whalesay:latest",
                 args=inputs,
-                command=[("cat %s" % inputs[0].path)],
+                command=[("cat %s" % inputs["artifacts"][0].path)],
                 source="sadfa\nasdf",
             )
 
@@ -276,7 +276,8 @@ class ArgoTest(ArgoBaseTestCase):
         ][0]
         self.assertEqual(params["name"], "para-B-0")
         self.assertTrue(
-            '"{{workflow.outputs.parameters.output-id-' in params["value"]
+            '"{{workflow.outputs.parameters.output-id-' in params["value"],
+            msg='Expected %s to start with "{{workflow.outputs.parameters.output-id-' % params["value"]
         )
         self.assertEqual(
             template["container"]["volumeMounts"],
@@ -420,7 +421,7 @@ class ArgoTest(ArgoBaseTestCase):
             couler._cleanup()
 
     def test_run_job_with_dependency_implicit_params_passing_from_container(
-        self
+            self
     ):
         success_condition = "status.succeeded > 0"
         failure_condition = "status.failed > 3"
@@ -576,7 +577,7 @@ class ArgoTest(ArgoBaseTestCase):
         )
 
     def _verify_script_body(
-        self, script_to_check, image, command, source, env
+            self, script_to_check, image, command, source, env
     ):
         self.assertEqual(script_to_check.get("image", None), image)
         self.assertEqual(script_to_check.get("command", None), command)

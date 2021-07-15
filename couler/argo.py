@@ -173,9 +173,9 @@ def _dump_yaml():
         print(yaml_str)
 
 
-def create_parameter_artifact(name, path, is_global=False):
+def create_parameter_artifact(path, is_global=False):
     return Artifact(
-        name=name, path=path, type="parameters", is_global=is_global
+        path=path, type="parameters", is_global=is_global
     )
 
 

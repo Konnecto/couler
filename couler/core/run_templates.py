@@ -13,6 +13,7 @@
 
 import os
 
+import attr
 import pyaml
 import yaml
 
@@ -25,11 +26,10 @@ from couler.core.templates import (
     OutputJob,
     Script,
 )
-from couler.core.templates.output import (
-    _container_output,
-    _job_output,
-    _script_output,
-)
+from couler.core.templates.container import _container_output
+from couler.core.templates.job import _job_output
+from couler.core.templates.script import _script_output
+from couler.core.templates.template import TemplateIO
 from couler.core.templates.volume import VolumeMount
 
 if os.environ.get("SUBMITTER_IMPLEMENTATION", None) == "Go":
@@ -42,26 +42,26 @@ else:
 
 
 def run_script(
-    image,
-    command=None,
-    source=None,
-    args=None,
-    output=None,
-    input=None,
-    env=None,
-    secret=None,
-    resources=None,
-    timeout=None,
-    retry=None,
-    step_name=None,
-    image_pull_policy=None,
-    pool=None,
-    enable_ulogfs=True,
-    daemon=False,
-    volume_mounts=None,
-    working_dir=None,
-    node_selector=None,
-    cache=None,
+        image,
+        command=None,
+        source=None,
+        args=None,
+        output=None,
+        input=None,
+        env=None,
+        secret=None,
+        resources=None,
+        timeout=None,
+        retry=None,
+        step_name=None,
+        image_pull_policy=None,
+        pool=None,
+        enable_ulogfs=True,
+        daemon=False,
+        volume_mounts=None,
+        working_dir=None,
+        node_selector=None,
+        cache=None,
 ):
     """
     Generate an Argo script template.  For example,
@@ -96,26 +96,12 @@ def run_script(
         if input is None:
             input = []
 
-        if args is None and states._outputs_tmp is not None:
-            args = []
-
         if args is not None:
-            if not isinstance(args, list):
-                args = [args]
-
-            # Handle case where args is a list of list type
-            # For example, [[Output, ]]
-            if (
-                isinstance(args, list)
-                and len(args) > 0
-                and isinstance(args[0], list)
-                and len(args[0]) > 0
-                and isinstance(args[0][0], Output)
-            ):
-                args = args[0]
-
             if states._outputs_tmp is not None:
-                args.extend(states._outputs_tmp)
+                args["parameters"].extend(states._outputs_tmp["parameters"])
+                if states._outputs_tmp["script"] is not None:
+                    args["parameters"].append(states._outputs_tmp["script"])
+                args["artifacts"].extend(states._outputs_tmp["artifacts"])
 
             # In case, the args include output artifact
             # Place output artifact into the input
@@ -154,8 +140,8 @@ def run_script(
             image_pull_policy=image_pull_policy,
             retry=retry,
             timeout=timeout,
-            output=output,
             input=input,
+            output=output,
             pool=pool,
             enable_ulogfs=enable_ulogfs,
             daemon=daemon,
@@ -198,30 +184,30 @@ def run_script(
 
 
 def run_container(
-    template_name=None,
-    image=None,
-    command=None,
-    args=None,
-    output=None,
-    input=None,
-    env=None,
-    env_from=None,
-    secret=None,
-    resources=None,
-    timeout=None,
-    retry=None,
-    step_name=None,
-    image_pull_policy=None,
-    pool=None,
-    enable_ulogfs=True,
-    daemon=False,
-    volume_mounts=None,
-    working_dir=None,
-    node_selector=None,
-    cache=None,
-    parallelism=None,
-    with_param=None,
-    tolerations=None,
+        template_name=None,
+        image=None,
+        command=None,
+        args=None,
+        output=None,
+        input=None,
+        env=None,
+        env_from=None,
+        secret=None,
+        resources=None,
+        timeout=None,
+        retry=None,
+        step_name=None,
+        image_pull_policy=None,
+        pool=None,
+        enable_ulogfs=True,
+        daemon=False,
+        volume_mounts=None,
+        working_dir=None,
+        node_selector=None,
+        cache=None,
+        parallelism=None,
+        with_param=None,
+        tolerations=None,
 ):
     """
     Generate an Argo container template.  For example, the template whalesay
@@ -268,16 +254,16 @@ def run_container(
             # Handle case where args is a list of list type
             # For example, [[Output, ]]
             if (
-                isinstance(args, list)
-                and len(args) > 0
-                and isinstance(args[0], list)
-                and len(args[0]) > 0
-                and isinstance(args[0][0], Output)
+                    isinstance(args, list)
+                    and len(args) > 0
+                    and isinstance(args[0], list)
+                    and len(args[0]) > 0
+                    and isinstance(args[0][0], Output)
             ):
                 args = args[0]
 
             if states._outputs_tmp is not None:
-                args.extend(states._outputs_tmp)
+                args.extend(states._outputs_tmp["parameters"])
 
             # In case, the args include output artifact
             # Place output artifact into the input
@@ -364,17 +350,17 @@ def run_container(
 
 
 def run_job(
-    manifest,
-    success_condition,
-    failure_condition,
-    timeout=None,
-    retry=None,
-    step_name=None,
-    pool=None,
-    env=None,
-    action="create",
-    set_owner_reference=True,
-    cache=None,
+        manifest,
+        success_condition,
+        failure_condition,
+        timeout=None,
+        retry=None,
+        step_name=None,
+        pool=None,
+        env=None,
+        action="create",
+        set_owner_reference=True,
+        cache=None,
 ):
     """
     Create a k8s job. For example, the pi-tmpl template in
@@ -401,7 +387,9 @@ def run_job(
     args = []
     if states.workflow.get_template(func_name) is None:
         if states._outputs_tmp is not None and env is not None:
-            env["inferred_outputs"] = states._outputs_tmp
+            env["inferred_outputs"] = []
+            env["inferred_outputs"].extend(states._outputs_tmp["artifacts"])
+            env["inferred_outputs"].extend(states._outputs_tmp["parameters"])
 
         # Generate the inputs for the manifest template
         envs, parameters, args = utils.generate_parameters_run_job(env)
@@ -414,8 +402,8 @@ def run_job(
             # TODO this is used to pass the test cases,
             # should be fixed in a better way
             if (
-                "labels" in manifest_dict["metadata"]
-                and "argo.step.owner" in manifest_dict["metadata"]["labels"]
+                    "labels" in manifest_dict["metadata"]
+                    and "argo.step.owner" in manifest_dict["metadata"]["labels"]
             ):
                 manifest_dict["metadata"]["labels"][
                     "argo.step.owner"
@@ -466,7 +454,7 @@ def run_job(
 
 
 def run_canned_step(
-    name, args, inputs=None, outputs=None, step_name=None, cache=None
+        name, args, inputs=None, outputs=None, step_name=None, cache=None
 ):
     func_name, caller_line = utils.invocation_location()
     func_name = (
@@ -477,7 +465,8 @@ def run_canned_step(
     )
     tmpl_args = []
     if states._outputs_tmp is not None:
-        tmpl_args.extend(states._outputs_tmp)
+        tmpl_args.extend(states._outputs_tmp["artifacts"])
+        tmpl_args.extend(states._outputs_tmp["parameters"])
     pb_step = None
     if proto_repr:
         pb_step = proto_repr.step_repr(  # noqa: F841

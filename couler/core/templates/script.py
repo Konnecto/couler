@@ -14,73 +14,27 @@
 import copy
 from collections import OrderedDict
 
+import attr
+
 from couler.core import states, utils
 from couler.core.constants import OVERWRITE_GPU_ENVS
-from couler.core.templates.container import Container
+from couler.core.templates import OutputScript
+from couler.core.templates.container import Container, _container_output
 from couler.core.templates.secret import Secret
 
 
+@attr.s
 class Script(Container):
-    def __init__(
-        self,
-        name,
-        image,
-        command,
-        source,
-        args=None,
-        env=None,
-        secret=None,
-        resources=None,
-        image_pull_policy=None,
-        retry=None,
-        timeout=None,
-        pool=None,
-        output=None,
-        input=None,
-        enable_ulogfs=True,
-        daemon=False,
-        volume_mounts=None,
-        working_dir=None,
-        node_selector=None,
-        volumes=None,
-        cache=None,
-    ):
-        Container.__init__(
-            self,
-            name,
-            image,
-            command,
-            args=args,
-            env=env,
-            secret=secret,
-            resources=resources,
-            image_pull_policy=image_pull_policy,
-            retry=retry,
-            timeout=timeout,
-            pool=pool,
-            output=output,
-            input=input,
-            enable_ulogfs=enable_ulogfs,
-            daemon=daemon,
-            volume_mounts=volume_mounts,
-            working_dir=working_dir,
-            node_selector=node_selector,
-            volumes=volumes,
-            cache=cache,
-        )
-        self.image = image
-        self.command = "python" if command is None else command
-        self.source = source
-        self.env = env
-        self.secret = secret
-        self.resources = resources
-        self.image_pull_policy = image_pull_policy
+    source: str = attr.ib(default=None)
+
+    def __attrs_post_init__(self):
+        self.command = "python" if self.command is None else self.command
 
     def to_dict(self):
         template = Container.to_dict(self)
         if (
-            not utils.gpu_requested(self.resources)
-            and states._overwrite_nvidia_gpu_envs
+                not utils.gpu_requested(self.resources)
+                and states._overwrite_nvidia_gpu_envs
         ):
             if self.env is None:
                 self.env = {}
@@ -138,3 +92,23 @@ class Script(Container):
                 self.image_pull_policy
             )
         return script
+
+
+def _script_output(step_name, template_name, output):
+    """Generate output name from an Argo script template.  For example,
+    "{{steps.generate.outputs.result}}" in
+    https://github.com/argoproj/argo/tree/master/examples#scripts--results
+    Return of run_script is contacted by:
+    couler.step_name.template_name.outputs.result
+    """
+    output_script = OutputScript(
+        name="script-output", step_name=step_name, template_name=template_name
+    )
+
+    if output is None:
+        return [output_script]
+
+    rets = _container_output(step_name, template_name, output)
+    rets["script"] = output_script
+
+    return rets

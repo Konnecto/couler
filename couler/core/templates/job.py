@@ -14,23 +14,24 @@
 from collections import OrderedDict
 
 from couler.core import utils
+from couler.core.templates.output import OutputJob
 from couler.core.templates.template import Template
 
 
 class Job(Template):
     def __init__(
-        self,
-        name,
-        args,
-        action,
-        manifest,
-        set_owner_reference,
-        success_condition,
-        failure_condition,
-        timeout=None,
-        retry=None,
-        pool=None,
-        cache=None,
+            self,
+            name,
+            args,
+            action,
+            manifest,
+            set_owner_reference,
+            success_condition,
+            failure_condition,
+            timeout=None,
+            retry=None,
+            pool=None,
+            cache=None,
     ):
         Template.__init__(
             self,
@@ -86,3 +87,31 @@ class Job(Template):
         if self.failure_condition:
             resource["failureCondition"] = self.failure_condition
         return resource
+
+
+def _job_output(step_name, template_name):
+    """
+    :param step_name:
+    :param template_name:
+    https://github.com/argoproj/argo/blob/master/examples/k8s-jobs.yaml#L44
+    Return the job name and job id for running a job
+    """
+    job_name = "couler.%s.%s.outputs.parameters.job-name" % (
+        step_name,
+        template_name,
+    )
+    job_id = "couler.%s.%s.outputs.parameters.job-id" % (
+        step_name,
+        template_name,
+    )
+    job_obj = "couler.%s.%s.outputs.parameters.job-obj" % (
+        step_name,
+        template_name,
+    )
+
+    return {
+        "job": OutputJob(
+            step_name=step_name, template_name=template_name,
+            job_name=job_name, job_obj=job_obj, job_id=job_id
+        )
+    }

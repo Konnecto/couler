@@ -166,7 +166,7 @@ class ArtifactTest(ArgoYamlTest):
             couler.run_container(
                 image="docker/whalesay:latest",
                 args=inputs,
-                command=[("cat %s" % inputs[0].path)],
+                command=[("cat %s" % inputs["artifacts"][0].path)],
             )
 
         outputs = producer()
@@ -231,7 +231,6 @@ class ArtifactTest(ArgoYamlTest):
         couler._cleanup()
 
     def test_set_dependencies_with_passing_artifact_implicitly(self):
-
         default_path = "/mnt/t1.txt"
 
         def producer(step_name):

@@ -14,74 +14,38 @@
 import copy
 from collections import OrderedDict
 
+import attr
+
 from couler.core import states, utils
 from couler.core.constants import OVERWRITE_GPU_ENVS
 from couler.core.templates.artifact import TypedArtifact
-from couler.core.templates.output import OutputArtifact, OutputJob
+from couler.core.templates.output import OutputArtifact, OutputJob, OutputEmpty, OutputParameter
 from couler.core.templates.parameter import ArgumentsParameter, InputParameter
 from couler.core.templates.secret import Secret
-from couler.core.templates.template import Template
+from couler.core.templates.template import Template, TemplateOutput
 
 
+@attr.s
 class Container(Template):
-    def __init__(
-        self,
-        name,
-        image,
-        command,
-        args=None,
-        env=None,
-        env_from=None,
-        secret=None,
-        resources=None,
-        image_pull_policy=None,
-        retry=None,
-        timeout=None,
-        pool=None,
-        output=None,
-        input=None,
-        enable_ulogfs=True,
-        daemon=False,
-        volume_mounts=None,
-        working_dir=None,
-        node_selector=None,
-        volumes=None,
-        cache=None,
-        tolerations=None,
-    ):
-        if output is not None:
-            output["parameters"] = utils.make_list_if_not(
-                output.get("parameters", [])
-            )
-            output["artifacts"] = utils.make_list_if_not(
-                output.get("artifacts", [])
-            )
+    image = attr.ib(default=None)
+    command = attr.ib(default=None)
+    args = attr.ib(default=None)
+    env = attr.ib(default=None)
+    env_from = attr.ib(default=None)
+    secret = attr.ib(default=None)
+    resources = attr.ib(default=None)
+    image_pull_policy = attr.ib(default=None)
+    volume_mounts = attr.ib(default=None)
+    working_dir = attr.ib(default=None)
+    node_selector = attr.ib(default=None)
+    volumes = attr.ib(default=None)
+    enable_ulogfs = attr.ib(default=True)
+    daemon = attr.ib(default=False)
+    cache = attr.ib(default=None)
+    tolerations = attr.ib(default=None)
 
-        Template.__init__(
-            self,
-            name=name,
-            output=output,
-            input=utils.make_list_if_not(input),
-            timeout=timeout,
-            retry=retry,
-            pool=pool,
-            enable_ulogfs=enable_ulogfs,
-            daemon=daemon,
-            cache=cache,
-            tolerations=tolerations,
-        )
-        self.image = image
-        self.command = utils.make_list_if_not(command)
-        self.args = args
-        self.env = env
-        self.env_from = env_from
-        self.secret = secret
-        self.resources = resources
-        self.image_pull_policy = image_pull_policy
-        self.volume_mounts = volume_mounts
-        self.working_dir = working_dir
-        self.node_selector = node_selector
-        self.volumes = volumes
+    def __attrs_post_init__(self):
+        self.command = utils.make_list_if_not(self.command)
 
     def get_volume_mounts(self):
         return self.volume_mounts
@@ -105,7 +69,7 @@ class Container(Template):
                             )
                             i += 1
                     elif isinstance(arg, ArgumentsParameter) or isinstance(
-                        arg, InputParameter
+                            arg, InputParameter
                     ):
                         parameters.append(arg.to_dict())
                     else:
@@ -120,21 +84,20 @@ class Container(Template):
             template["inputs"]["parameters"] = parameters
 
         # Case 2: add the input artifact
-        if self.input is not None:
-            _input_list = []
-            for o in self.input:
-                if isinstance(o, TypedArtifact):
-                    _input_list.append(o.to_yaml())
-                if isinstance(o, OutputArtifact):
-                    name = o.artifact["name"]
-                    if not any(name == x["name"] for x in _input_list):
-                        _input_list.append(o.artifact)
+        _input_artifact_list = []
+        for o in self.input.artifacts:
+            if isinstance(o, TypedArtifact):
+                _input_artifact_list.append(o.to_yaml())
+            if isinstance(o, OutputArtifact):
+                name = o.artifact["name"]
+                if not any(name == x["name"] for x in _input_artifact_list):
+                    _input_artifact_list.append(o.artifact)
 
-            if len(_input_list) > 0:
-                if "inputs" not in template:
-                    template["inputs"] = OrderedDict()
+        if len(_input_artifact_list) > 0:
+            if "inputs" not in template:
+                template["inputs"] = OrderedDict()
 
-                template["inputs"]["artifacts"] = _input_list
+            template["inputs"]["artifacts"] = _input_artifact_list
 
         # Node selector
         if self.node_selector is not None:
@@ -143,8 +106,8 @@ class Container(Template):
 
         # Container
         if (
-            not utils.gpu_requested(self.resources)
-            and states._overwrite_nvidia_gpu_envs
+                not utils.gpu_requested(self.resources)
+                and states._overwrite_nvidia_gpu_envs
         ):
             if self.env is None:
                 self.env = {}
@@ -154,8 +117,8 @@ class Container(Template):
         # Output
         if self.output is not None:
             template["outputs"] = {
-                "artifacts": [o.to_yaml() for o in self.output["artifacts"]],
-                "parameters": [o.to_yaml() for o in self.output["parameters"]],
+                "artifacts": [o.to_yaml() for o in self.output.artifacts],
+                "parameters": [o.to_yaml() for o in self.output.parameters],
             }
 
         return template
@@ -204,7 +167,7 @@ class Container(Template):
             for i in range(len(args)):
                 o = args[i]
                 if isinstance(o, ArgumentsParameter) or isinstance(
-                    o, InputParameter
+                        o, InputParameter
                 ):
                     pass
                 elif not isinstance(o, OutputArtifact):
@@ -214,3 +177,64 @@ class Container(Template):
                         parameters.append(param_full_name)
 
         return parameters
+
+
+def _container_param_output(output_object, step_name, template_name):
+    is_global = "globalName" in output_object
+    return OutputParameter(
+        name=output_object["name"],
+        step_name=step_name,
+        template_name=template_name,
+        is_global=is_global,
+    )
+
+
+def _container_artifact_output(output_object, step_name, template_name):
+    is_global = "globalName" in output_object
+    return OutputArtifact(
+        name=output_object["name"],
+        step_name=step_name,
+        template_name=template_name,
+        path=output_object["path"],
+        artifact=output_object,
+        is_global=is_global,
+    )
+
+
+def _container_output(step_name, template_name, output):
+    """Generate output name from an Argo container template.  For example,
+    "{{steps.generate-parameter.outputs.parameters.hello-param}}" used in
+    https://github.com/argoproj/argo/tree/master/examples#output-parameters.
+    Each element of return for run_container is contacted by:
+    couler.step_name.template_name.output.parameters.output_id
+    """
+
+    if output is None:
+        return {
+            "parameters": [
+                OutputEmpty(
+                    name="%s-empty-output" % template_name,
+                    step_name=step_name,
+                    template_name=template_name,
+                )
+            ]
+        }
+
+    return {
+        "parameters": [
+            _container_param_output(
+                output_object=o,
+                step_name=step_name,
+                template_name=template_name,
+            )
+            for o in output["parameters"]
+        ],
+        "artifacts": [
+            _container_artifact_output(
+                output_object=o,
+                step_name=step_name,
+                template_name=template_name,
+            )
+            for o in output["artifacts"]
+        ],
+    }

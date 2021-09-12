@@ -101,14 +101,14 @@ def set_default_submitter(submitter=None):
 
 
 def delete(
-    name,
-    namespace="default",
-    config_file=None,
-    context=None,
-    client_configuration=None,
-    persist_config=True,
-    grace_period_seconds=5,
-    propagation_policy="Background",
+        name,
+        namespace="default",
+        config_file=None,
+        context=None,
+        client_configuration=None,
+        persist_config=True,
+        grace_period_seconds=5,
+        propagation_policy="Background",
 ):
     try:
         config.load_kube_config(
@@ -184,13 +184,13 @@ def create_local_artifact(**kwargs):
 
 
 def create_oss_artifact(
-    path,
-    bucket=None,
-    accesskey_id=None,
-    accesskey_secret=None,
-    key=None,
-    endpoint=None,
-    is_global=False,
+        path,
+        bucket=None,
+        accesskey_id=None,
+        accesskey_secret=None,
+        key=None,
+        endpoint=None,
+        is_global=False,
 ):
     """
     Configure the object as OssArtifact
@@ -216,14 +216,14 @@ def create_oss_artifact(
 
 
 def create_s3_artifact(
-    path,
-    bucket=None,
-    accesskey_id=None,
-    accesskey_secret=None,
-    key=None,
-    endpoint=None,
-    is_global=False,
-    name=None,
+        path,
+        bucket=None,
+        accesskey_id=None,
+        accesskey_secret=None,
+        key=None,
+        endpoint=None,
+        is_global=False,
+        name=None,
 ):
     """
     Configure the object as S3Artifact
@@ -261,26 +261,27 @@ def create_secret(secret_data, namespace="default", name=None, dry_run=False):
 
 
 def create_container_template(
-    name,
-    image=None,
-    command=None,
-    args=None,
-    output=None,
-    input=None,
-    env=None,
-    env_from=None,
-    secret=None,
-    resources=None,
-    timeout=None,
-    retry=None,
-    image_pull_policy=None,
-    pool=None,
-    enable_ulogfs=True,
-    daemon=False,
-    volume_mounts=None,
-    working_dir=None,
-    node_selector=None,
-    cache=None,
+        name,
+        image=None,
+        command=None,
+        args=None,
+        output=None,
+        input=None,
+        env=None,
+        env_from=None,
+        secret=None,
+        resources=None,
+        timeout=None,
+        retry=None,
+        image_pull_policy=None,
+        pool=None,
+        enable_ulogfs=True,
+        daemon=False,
+        volume_mounts=None,
+        working_dir=None,
+        node_selector=None,
+        cache=None,
+        tolerations=None,
 ):
     # Generate container and template
     template = Container(
@@ -304,6 +305,7 @@ def create_container_template(
         working_dir=working_dir,
         node_selector=node_selector,
         cache=cache,
+        tolerations=tolerations,
     )
     states.workflow.add_template(template)
 

@@ -48,7 +48,8 @@ class Template(object):
         if self.timeout is not None:
             template["activeDeadlineSeconds"] = self.timeout
         if self.retry is not None:
-            template["retryStrategy"] = utils.config_retry_strategy(self.retry)
+            template["retryStrategy"] = self.retry
+            #template["retryStrategy"] = utils.config_retry_strategy(self.retry)
         if self.cache is not None:
             template["memoize"] = self.cache.to_dict()
         if self.parallelism is not None:

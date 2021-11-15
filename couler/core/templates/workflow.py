@@ -41,6 +41,7 @@ class Workflow(object):
         self.service_account = None
         self.security_context = None
         self.labels = None
+        self.main_parameters={}
 
     def add_template(self, template: Template):
         self.templates.update({template.name: template})
@@ -144,9 +145,9 @@ class Workflow(object):
             workflow_spec.update({"volumeClaimTemplates": self.pvcs})
         if self.dag_mode_enabled():
             dag = {"tasks": list(self.dag_tasks.values())}
-            ts = [OrderedDict({"name": entrypoint, "dag": dag})]
+            ts = [OrderedDict({**{"name": entrypoint, "dag": dag}, **self.main_parameters})]
         else:
-            ts = [{"name": entrypoint, "steps": self.get_steps_dict()}]
+            ts = [{**{"name": entrypoint, "steps": self.get_steps_dict()}, **self.main_parameters}]
         for template in self.templates.values():
             template_dict = template.to_dict()
             if (

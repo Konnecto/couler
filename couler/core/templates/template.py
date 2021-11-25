@@ -46,5 +46,5 @@ class Template(object):
         if self.tolerations is not None:
             template["tolerations"] = self.tolerations.copy()
         if self.affinity is not None:
-            template["affinity"] = self.affinity.to_dict()
+            template["affinity"] = self.affinity.copy()
         return template

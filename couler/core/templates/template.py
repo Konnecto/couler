@@ -30,6 +30,7 @@ class Template(object):
     daemon = attr.ib(default=False)
     cache = attr.ib(default=None)
     tolerations = attr.ib(default=None)
+    affinity = attr.ib(default=None)
 
     def to_dict(self):
         template = OrderedDict({"name": self.name})
@@ -44,4 +45,6 @@ class Template(object):
             template["memoize"] = self.cache.to_dict()
         if self.tolerations is not None:
             template["tolerations"] = self.tolerations.copy()
+        if self.affinity is not None:
+            template["affinity"] = self.affinity.to_dict()
         return template

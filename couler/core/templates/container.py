@@ -70,6 +70,7 @@ class Container(Template):
             daemon=daemon,
             cache=cache,
             tolerations=tolerations,
+            affinity=affinity,
         )
         self.image = image
         self.command = utils.make_list_if_not(command)

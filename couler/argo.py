@@ -282,6 +282,7 @@ def create_container_template(
         node_selector=None,
         cache=None,
         tolerations=None,
+        affinity=None,
 ):
     # Generate container and template
     template = Container(
@@ -306,6 +307,7 @@ def create_container_template(
         node_selector=node_selector,
         cache=cache,
         tolerations=tolerations,
+        affinity=affinity,
     )
     states.workflow.add_template(template)
 

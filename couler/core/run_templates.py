@@ -224,6 +224,7 @@ def run_container(
     parallelism=None,
     with_param=None,
     tolerations=None,
+    affinity=None,
 ):
     """
     Generate an Argo container template.  For example, the template whalesay
@@ -328,6 +329,7 @@ def run_container(
             node_selector=node_selector,
             cache=cache,
             tolerations=tolerations,
+            affinity=affinity,
         )
         states.workflow.add_template(template_object)
 

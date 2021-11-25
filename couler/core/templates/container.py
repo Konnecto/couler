@@ -48,6 +48,7 @@ class Container(Template):
         volumes=None,
         cache=None,
         tolerations=None,
+        affinity=None,
     ):
         if output is not None:
             output["parameters"] = utils.make_list_if_not(
@@ -69,6 +70,7 @@ class Container(Template):
             daemon=daemon,
             cache=cache,
             tolerations=tolerations,
+            affinity=affinity,
         )
         self.image = image
         self.command = utils.make_list_if_not(command)
